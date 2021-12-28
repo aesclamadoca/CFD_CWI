@@ -1,3 +1,6 @@
+import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt
 class solver():
 
   def __init__(self,
@@ -22,17 +25,17 @@ class solver():
     self.global_Pe = self.rho * self.u * self.L / self.Gamma
     self.local_Pe = self.rho * self.u * self.dx / self.Gamma
     
-    self.x = np.array([i*self.dx for i in range(int(self.L/self.dx))])
+    self.x = np.array([i*self.dx for i in range(gridpoints)])
     self.phi_0 = inlet_bc
     self.phi_L = outlet_bc
     
-    self.analytical_phi = np.zeros(10*len(self.x))
-    self.phi = np.zeros(int(self.L/self.dx))
-    self.P = np.zeros(int(self.L/self.dx))
-    self.Q = np.zeros(int(self.L/self.dx))
+    self.analytical_phi = np.zeros(50*len(self.x))
+    self.phi = np.zeros(gridpoints)
+    self.P = np.zeros(gridpoints)
+    self.Q = np.zeros(gridpoints)
     self.error = 0
 
-    #Solve for phi
+    #Solve for phi and calc error
     if self.scheme == "CDS": self.CDS()
     elif self.scheme == "UDS": self.UDS()
     elif self.scheme == "PLDS": self.PLDS()
@@ -104,10 +107,10 @@ class solver():
       self.phi[i] = self.P[i] * self.phi[i+1] + self.Q[i]
   
 
-  
+
 
   def analytical_soln(self):
-    x_domain = np.array([x/10/len(self.x) for x in range(10*len(self.x))])
+    x_domain = np.array([x/50/len(self.x) for x in range(50*len(self.x))])
     self.analytical_phi = self.phi_0 + (np.exp(self.global_Pe * x_domain/self.L)-1)/(np.exp(self.global_Pe)-1) * (self.phi_L-self.phi_0)
 
   def numerical_error(self):
