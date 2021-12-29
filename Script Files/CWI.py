@@ -1,75 +1,182 @@
-from Solver import solver
+import os
 import time
+import shutil
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-import os
-dir='Plots'
-if not os.path.exists(dir):
-    os.makedirs(dir)
+from Solver import solver
 # Run -defaults write org.python.python ApplePersistenceIgnoreState NO- before executing -python3 <filename>- if running from mac terminal
 
 
 
-def phi_distribution_plot(scheme, velocity):
 
-  solve = solver(scheme, velocity)
-  print(f"""Domain properties are set to: 
-        Gamma_phi = {solve.get_Gamma()}
-        Fluid Velocity = {solve.get_u()} m/s
-        Fluid Density = {solve.get_rho()} kg/m^3
-        Number of Gridpoints = {solve.get_gridpoint_n()}""")
-  print('Solving equation in the Domain ...')
 
+def phi_distribution_plot(velocity, gridpoints, sweep=False):
+  
   # Solve for phi
-  analytical_phi = solve.get_analytical_phi()
   start_time = time.time()
-  numerical_phi = solve.get_numerical_phi()
+  solve_CDS = solver('CDS',fluid_velocity=velocity,gridpoints=gridpoints)
   end_time = time.time()
-  print(f"It took {end_time-start_time}s to solve the equation.")
-  print(f'% Error = {round(solve.get_error(),2)}')
-  print(f'Local Pe = {solve.get_local_Pe()}')
-  print(f"Saving plot of phi distribution along the domain to {dir}/{scheme}...\n\n")
+  CDS_time = end_time-start_time
+
+  start_time = time.time()
+  solve_UDS = solver('UDS',fluid_velocity=velocity,gridpoints=gridpoints)
+  end_time = time.time()
+  UDS_time = end_time-start_time
+
+  start_time = time.time()
+  solve_PLDS = solver('PLDS',fluid_velocity=velocity,gridpoints=gridpoints)
+  end_time = time.time()
+  PLDS_time = end_time-start_time
+
+  status_str = f"""Domain properties are set to: 
+  Gamma_phi = {solve_CDS.get_Gamma()}
+  Fluid Density = {solve_CDS.get_rho()} kg/m^3
+  Fluid Velocity = {solve_CDS.get_u()} m/s
+  Number of Gridpoints = {solve_CDS.get_gridpoint_n()}
+  |Local Pe| = {abs(solve_CDS.get_local_Pe())}
+  
+  It took {CDS_time}s to solve the equation w/ CDS
+  It took {UDS_time}s to solve the equation w/ UDS
+  It took {PLDS_time}s to solve the equation w/ PLDS
+  CDS % Error = {round(solve_CDS.get_error(),2)}
+  UDS % Error = {round(solve_UDS.get_error(),2)}
+  PLDS % Error = {round(solve_PLDS.get_error(),2)}
+  
+  Saving plot of phi distribution along the domain to ae518_plots/phi_distribution_plots/Individual_tests/u{int(velocity)}_gridpoints{gridpoints}...\n\n
+  """
+
 
   # Plot phi
   fig = plt.figure()
-  plt.plot([x/10/len(solve.x) for x in range(10*len(solve.x))],analytical_phi,label='Analytical Solution')
-  plt.plot(solve.get_x(),numerical_phi,label=f'Numerical Solution ({scheme})')
+  plt.plot(solve_CDS.get_anx(),solve_CDS.get_analytical_phi(),label='Analytical Solution')
+  plt.plot(solve_CDS.get_x(),solve_CDS.get_numerical_phi(),label=f'Numerical Solution (CDS)',linewidth=0.75)
+  plt.plot(solve_UDS.get_x(),solve_UDS.get_numerical_phi(),label=f'Numerical Solution (UDS)',linewidth=0.75)
+  plt.plot(solve_PLDS.get_x(),solve_PLDS.get_numerical_phi(),label=f'Numerical Solution (PLDS)',linewidth=0.75)
+      
 
-  plt.title(r'Distribution of $\phi$ along the domain')
-  plt.xlabel('x')
+  plt.title(fr'Distribution of $\phi$ along the domain (u={int(velocity)}m/s, gridpoints={gridpoints})')
+  plt.annotate(fr'|Local Pe| = {abs(round(velocity/gridpoints,1))}',xy=(0.5,50))
+  plt.xlabel('x (m)')
   plt.ylabel(r'$\phi$')
   plt.legend()
-  # plt.show()
-  plt.savefig(f'{dir}/{scheme}',dpi=800)
+
+  if sweep: plt.savefig(f'ae518_plots/phi_distribution_plots/sweep/{int(velocity)}m_per_s/u{int(velocity)}_gp{gridpoints}',dpi=800)
+  else: plt.savefig(f'ae518_plots/phi_distribution_plots/Individual_tests/u{int(velocity)}_gp{gridpoints}',dpi=800)
+  return status_str
+
+
+
+
+
+
+
+
+
+
+## Plot error (all schemes) for different u values
+def scheme_errors():
+  
+  for velocity in np.linspace(-50,50,11):
+    fig = plt.figure()
+    for scheme in ['CDS','UDS','PLDS']:
+      error_list = []
+      gp_list = np.linspace(1,50,50-1)
+      for gridpoints in gp_list:
+        solve = solver(scheme,fluid_velocity=velocity,gridpoints=int(gridpoints))
+        error_list.append(solve.get_error())
+      
+      plt.plot(gp_list,error_list,label=f'scheme = {scheme}')
+      plt.title(f'Error of numerical Solution for u={velocity}m/s')
+      plt.ylabel('% Error ')
+      plt.xlabel('Number of Gridpoints (1/dx)')
+
+    plt.legend()
+    # plt.ylim(-20,20)
+    plt.savefig(f'ae518_plots/error_plots/scheme_errors/error_(u{int(velocity)})',dpi=800)
+
+
+
+
+
+
+
+## Plot error (range of u values) for different schemes
+def scheme_errors_func_u():
+
+  for scheme in ['CDS','UDS','PLDS']:
+    fig = plt.figure()
+    max_gp = 200
+    for u in np.linspace(-10,10,11):
+      error_list = []
+      gp_list = np.linspace(1,max_gp,max_gp-1)
+      for gridpoints in gp_list:
+        solve = solver(scheme,gridpoints=int(gridpoints),fluid_velocity=u)
+        error_list.append(solve.get_error())
+
+
+      plt.plot(gp_list,error_list,linewidth=0.5,label=f'u = {u}m/s')
+      plt.title(f'Error of numerical {scheme} Solution w.r.t the Analytical Solution')
+      plt.ylabel('% Error ')
+      plt.xlabel('Number of Gridpoints (1/dx)')
+
+    plt.legend(loc='lower right',prop={'size': 6})
+    plt.savefig(f'ae518_plots/error_plots/scheme_errors_func_u/{scheme}_error_f(u)',dpi=800)
+
+ 
+
+
+
 
 
 if __name__ == '__main__':
 
-  scheme_dict = {'CDS':'Central Differencing Scheme',
-               'UDS':'Upwind Differencing Scheme',
-               'PLDS':'Power Law Differencing Scheme'}
+  #Generate Plot Sweep if folder doesnt exist
+  if not os.path.exists('ae518_plots'):
+    os.makedirs('ae518_plots/error_plots/scheme_errors')
+    os.makedirs('ae518_plots/error_plots/scheme_errors_func_u')
+    os.makedirs('ae518_plots/phi_distribution_plots/Individual_tests')
+    for velocity in [-50,-20,-5,0,5,20,50]:
+      os.makedirs(f'ae518_plots/phi_distribution_plots/sweep/{int(velocity)}m_per_s')
+    print('You can find plots of a range of parameters in the ae518_plots directory. Currently generating, this will take around 3 mins ...')
 
-  #Ask user what fluid velocity they would like to try
-  while True:
-    print("What fluid velocity would you like to test? Please enter a float or an integer.")
-    velocity = input()
-    try: velocity = int(velocity)
-    except ValueError:
-      try: velocity = float(velocity)
-      except ValueError: continue
-    break
-  print(type(velocity))
-  print(f'The constant fluid velocity in the domain has been set to {velocity} m/s')
+    #Sweeped Distribution profile
+    for velocity in [-50,-20,-5,0,5,20,50]:
+      for gridpoints in [5,10,20,50,500]:
+        phi_distribution_plot(velocity,gridpoints,sweep=True)
+    
+    #Error Plots
+    scheme_errors_func_u()
+    scheme_errors()
+    print('Done!\n')
+  
+  else: print('You can find plots of a range of parameters in the ae518_plots directory.')
 
-  #Ask user what type of differencing scheme they would like to try
-  while True:
-    print("Please choose a discretization scheme. Type one of the following options into the command prompt: \n\tCDS \n\tUDS \n\tPLDS")
-    scheme_text = input()
-    if scheme_text in ['CDS','UDS','PLDS']: break
-    print("Please ensure you have entered the acronym in all caps with no spaces!")
-  print(f"You have chosen to discretize the convection component of the phi convection-diffusion equation with the {scheme_dict[scheme_text]}\n\n")
+  print('This UI is for testing distribution of phi with specific (Velocity, Gridpoint Number) pairs.\n')
 
-  #Plot the numerical solution against the analytical solution
-  phi_distribution_plot(scheme_text,velocity)
+  #Ask user what fluid velocity and number of gridpoints they would like to try
+  attribute_prompt = {'constant fluid velocity':('m/s',' or float'),
+                      'number of gridpoints':('','')}
+  for attribute, dec in attribute_prompt.items():
+    while True:
+      print(f"What {attribute} would you like to test? Please enter an integer{dec[1]}.")
+      num_attribute = input()
+      try: num_attribute = int(num_attribute)
+      except ValueError:
+        try: num_attribute = float(num_attribute)
+        except ValueError: continue
+      if attribute == 'constant fluid velocity': 
+        velocity = num_attribute
+        print(f'The {attribute} in the domain has been set to {velocity} {dec[0]}')
+      if attribute == 'number of gridpoints': 
+        gridpoints = int(num_attribute)
+        print(f'The {attribute} in the domain has been set to {gridpoints} {dec[0]}')
+      break
+  
+
+  print('Solving equation in the Domain ...')
+  status_str = phi_distribution_plot(velocity,gridpoints)
+  print(status_str)
+    
+

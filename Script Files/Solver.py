@@ -16,6 +16,7 @@ class solver():
     
     # Global Attributes
     self.scheme = scheme_acronym
+    self.angp_ratio = 50
     
     self.u = fluid_velocity
     self.rho = fluid_density
@@ -25,11 +26,12 @@ class solver():
     self.global_Pe = self.rho * self.u * self.L / self.Gamma
     self.local_Pe = self.rho * self.u * self.dx / self.Gamma
     
-    self.x = np.array([i*self.dx for i in range(gridpoints)])
+    self.x = np.linspace(0,self.L,gridpoints)
+    self.analytical_x = np.linspace(0,self.L,self.angp_ratio*gridpoints)
     self.phi_0 = inlet_bc
     self.phi_L = outlet_bc
     
-    self.analytical_phi = np.zeros(50*len(self.x))
+    self.analytical_phi = np.zeros(self.angp_ratio*gridpoints)
     self.phi = np.zeros(gridpoints)
     self.P = np.zeros(gridpoints)
     self.Q = np.zeros(gridpoints)
@@ -45,6 +47,7 @@ class solver():
   # Getter methods
   def get_local_Pe(self): return self.local_Pe
   def get_x(self): return self.x
+  def get_anx(self): return self.analytical_x
   def get_P(self): return self.P
   def get_Q(self): return self.Q
   def get_numerical_phi(self): return self.phi
@@ -53,6 +56,7 @@ class solver():
   def get_u(self): return self.u
   def get_Gamma(self): return self.Gamma
   def get_gridpoint_n(self): return int(self.L/self.dx)
+  def get_dx(self): return self.dx
   def get_error(self): return self.error
 
 
@@ -65,7 +69,7 @@ class solver():
     b = D - 0.5 * F
     c = D + 0.5 * F
 
-    self.TDMA(a,b,c,0)
+    self.TDMA(a,b,c)
   
   def UDS(self):
     D = self.Gamma / self.dx
@@ -75,7 +79,7 @@ class solver():
     b = D + max(-F,0)
     c = D + max(F,0)
   
-    self.TDMA(a,b,c,0)
+    self.TDMA(a,b,c)
 
   def PLDS(self):
     D = self.Gamma / self.dx
@@ -85,13 +89,13 @@ class solver():
     c = D*max((1-0.1*self.local_Pe)**5,0) + max(F,0)
     a = b + c
   
-    self.TDMA(a,b,c,0)
+    self.TDMA(a,b,c)
 
 
 
 
   ## Use Linear Algebraic Equation Solution Algorithm TDMA
-  def TDMA(self,a,b,c,d):
+  def TDMA(self,a,b,c):
     # Set BCs
     self.P[0], self.P[-1] = 0,0
     self.Q[0], self.Q[-1] = self.phi_0, self.phi_L
@@ -110,12 +114,14 @@ class solver():
 
 
   def analytical_soln(self):
-    x_domain = np.array([x/50/len(self.x) for x in range(50*len(self.x))])
-    self.analytical_phi = self.phi_0 + (np.exp(self.global_Pe * x_domain/self.L)-1)/(np.exp(self.global_Pe)-1) * (self.phi_L-self.phi_0)
+    if self.u == 0:
+      self.analytical_phi = (self.phi_L-self.phi_0)/self.L * self.analytical_x + self.phi_0
+    else:
+      self.analytical_phi = self.phi_0 + (np.exp(self.global_Pe * self.analytical_x/self.L)-1)/(np.exp(self.global_Pe)-1) * (self.phi_L-self.phi_0)
 
   def numerical_error(self):
     for i in range(len(self.phi)):
-      self.error += 100*self.dx/self.L * (self.phi[i]-self.analytical_phi[10*i])/self.analytical_phi[10*i]
+      self.error += 100*self.dx/self.L * (self.phi[i]-self.analytical_phi[self.angp_ratio*i])/self.analytical_phi[self.angp_ratio*i]
     
 
   
