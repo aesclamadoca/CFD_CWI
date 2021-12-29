@@ -69,12 +69,6 @@ def phi_distribution_plot(velocity, gridpoints, sweep=False):
 
 
 
-
-
-
-
-
-
 ## Plot error (all schemes) for different u values
 def scheme_errors():
   
@@ -95,8 +89,6 @@ def scheme_errors():
     plt.legend()
     # plt.ylim(-20,20)
     plt.savefig(f'ae518_plots/error_plots/scheme_errors/error_(u{int(velocity)})',dpi=800)
-
-
 
 
 
@@ -125,10 +117,7 @@ def scheme_errors_func_u():
     plt.savefig(f'ae518_plots/error_plots/scheme_errors_func_u/{scheme}_error_f(u)',dpi=800)
 
  
-
-
-
-
+ 
 
 if __name__ == '__main__':
 
