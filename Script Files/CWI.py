@@ -44,7 +44,7 @@ def phi_distribution_plot(velocity, gridpoints, sweep=False):
   UDS % Error = {round(solve_UDS.get_error(),2)}
   PLDS % Error = {round(solve_PLDS.get_error(),2)}
   
-  Saving plot of phi distribution along the domain to ae518_plots/phi_distribution_plots/Individual_tests/u{int(velocity)}_gridpoints{gridpoints}...\n\n
+  Saving plot of phi distribution along the domain to all_plots/phi_distribution_plots/Individual_test_plots/u{int(velocity)}_gridpoints{gridpoints}...\n\n
   """
 
 
@@ -62,8 +62,8 @@ def phi_distribution_plot(velocity, gridpoints, sweep=False):
   plt.ylabel(r'$\phi$')
   plt.legend()
 
-  if sweep: plt.savefig(f'ae518_plots/phi_distribution_plots/sweep/{int(velocity)}m_per_s/u{int(velocity)}_gp{gridpoints}',dpi=800)
-  else: plt.savefig(f'ae518_plots/phi_distribution_plots/Individual_tests/u{int(velocity)}_gp{gridpoints}',dpi=800)
+  if sweep: plt.savefig(f'all_plots/phi_distribution_plots/sweep/{int(velocity)}m_per_s/u{int(velocity)}_gp{gridpoints}',dpi=800)
+  else: plt.savefig(f'Individual_test_plots/u{int(velocity)}_gp{gridpoints}',dpi=800)
   return status_str
 
 
@@ -88,7 +88,7 @@ def scheme_errors():
 
     plt.legend()
     # plt.ylim(-20,20)
-    plt.savefig(f'ae518_plots/error_plots/scheme_errors/error_(u{int(velocity)})',dpi=800)
+    plt.savefig(f'all_plots/error_plots/scheme_errors/error_(u{int(velocity)})',dpi=800)
 
 
 
@@ -114,33 +114,47 @@ def scheme_errors_func_u():
       plt.xlabel('Number of Gridpoints (1/dx)')
 
     plt.legend(loc='lower right',prop={'size': 6})
-    plt.savefig(f'ae518_plots/error_plots/scheme_errors_func_u/{scheme}_error_f(u)',dpi=800)
+    plt.savefig(f'all_plots/error_plots/scheme_errors_func_u/{scheme}_error_f(u)',dpi=800)
 
  
- 
+
 
 if __name__ == '__main__':
 
   #Generate Plot Sweep if folder doesnt exist
-  if not os.path.exists('ae518_plots'):
-    os.makedirs('ae518_plots/error_plots/scheme_errors')
-    os.makedirs('ae518_plots/error_plots/scheme_errors_func_u')
-    os.makedirs('ae518_plots/phi_distribution_plots/Individual_tests')
-    for velocity in [-50,-20,-5,0,5,20,50]:
-      os.makedirs(f'ae518_plots/phi_distribution_plots/sweep/{int(velocity)}m_per_s')
-    print('You can find plots of a range of parameters in the ae518_plots directory. Currently generating, this will take around 3 mins ...')
+  if not os.path.exists('Individual_test_plots'):
+    os.makedirs('Individual_test_plots')
+  while True:
+    print("Do you want to generate a range of error plots and phi distribution plots for different parameter combinations?\n\t yes \n\t no")
+    input_a = input()
+    if input_a.lower() == 'yes':
+      if not os.path.exists('all_plots'):
+        os.makedirs('all_plots/error_plots/scheme_errors')
+        os.makedirs('all_plots/error_plots/scheme_errors_func_u')
+        
+        for velocity in [-50,-20,-5,0,5,20,50]:
+          os.makedirs(f'all_plots/phi_distribution_plots/{int(velocity)}m_per_s')
+      
+      print('Currently generating and saving in the all_plots directory. This will take around 2 mins ...')
 
-    #Sweeped Distribution profile
-    for velocity in [-50,-20,-5,0,5,20,50]:
-      for gridpoints in [5,10,20,50,500]:
-        phi_distribution_plot(velocity,gridpoints,sweep=True)
-    
-    #Error Plots
-    scheme_errors_func_u()
-    scheme_errors()
-    print('Done!\n')
-  
-  else: print('You can find plots of a range of parameters in the ae518_plots directory.')
+      #Swept Distribution profile
+      for count,velocity in enumerate([-50,-20,-5,0,5,20,50]):
+        print(f"\n{round(100/8*(count))}% completed\n")
+        for gridpoints in [5,10,20,50,500]:
+          phi_distribution_plot(velocity,gridpoints,sweep=True)
+      
+      print("\n90% completed\n")
+      #Error Plots
+      scheme_errors_func_u()
+      scheme_errors()
+      print('Done!\n')
+
+    elif input_a.lower() == 'no': break
+    else:
+      print('Please answer: yes or no')
+      continue
+    print('You can find plots of a range of parameters in the all_plots directory.')
+    break
 
   print('This UI is for testing distribution of phi with specific (Velocity, Gridpoint Number) pairs.\n')
 
