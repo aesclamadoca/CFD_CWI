@@ -1,6 +1,5 @@
 import os
 import time
-import shutil
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -51,15 +50,16 @@ def phi_distribution_plot(velocity, gridpoints, sweep=False):
   # Plot phi
   fig = plt.figure()
   plt.plot(solve_CDS.get_anx(),solve_CDS.get_analytical_phi(),label='Analytical Solution')
-  plt.plot(solve_CDS.get_x(),solve_CDS.get_numerical_phi(),label=f'Numerical Solution (CDS)',linewidth=0.75)
-  plt.plot(solve_UDS.get_x(),solve_UDS.get_numerical_phi(),label=f'Numerical Solution (UDS)',linewidth=0.75)
-  plt.plot(solve_PLDS.get_x(),solve_PLDS.get_numerical_phi(),label=f'Numerical Solution (PLDS)',linewidth=0.75)
+  plt.plot(solve_CDS.get_x(),solve_CDS.get_numerical_phi(),label=f'Numerical Solution (CDS)',linewidth=0.75,linestyle='--',marker='x',markersize=3)
+  plt.plot(solve_UDS.get_x(),solve_UDS.get_numerical_phi(),label=f'Numerical Solution (UDS)',linewidth=0.75,linestyle='--',marker='x',markersize=3)
+  plt.plot(solve_PLDS.get_x(),solve_PLDS.get_numerical_phi(),label=f'Numerical Solution (PLDS)',linewidth=0.75,linestyle='--',marker='x',markersize=3)
       
 
   plt.title(fr'Distribution of $\phi$ along the domain (u={int(velocity)}m/s, gridpoints={gridpoints})')
   plt.annotate(fr'|Local Pe| = {abs(round(velocity/gridpoints,1))}',xy=(0.5,50))
   plt.xlabel('x (m)')
   plt.ylabel(r'$\phi$')
+  plt.grid(linewidth=0.2) 
   plt.legend()
 
   if sweep: plt.savefig(f'all_plots/phi_distribution_plots/{int(velocity)}m_per_s/u{int(velocity)}_gp{gridpoints}',dpi=800)
@@ -83,8 +83,9 @@ def scheme_errors():
       
       plt.plot(gp_list,error_list,label=f'scheme = {scheme}')
       plt.title(f'Error of numerical Solution for u={velocity}m/s')
+      plt.xlabel('Number of Gridpoints (1/$\delta$x)')
       plt.ylabel('% Error ')
-      plt.xlabel('Number of Gridpoints (1/dx)')
+      plt.grid(linewidth=0.2) 
 
     plt.legend()
     # plt.ylim(-20,20)
@@ -110,8 +111,9 @@ def scheme_errors_func_u():
 
       plt.plot(gp_list,error_list,linewidth=0.5,label=f'u = {u}m/s')
       plt.title(f'Error of numerical {scheme} Solution w.r.t the Analytical Solution')
-      plt.ylabel('% Error ')
       plt.xlabel('Number of Gridpoints (1/dx)')
+      plt.ylabel('% Error ')
+      plt.grid(linewidth=0.2) 
 
     plt.legend(loc='lower right',prop={'size': 6})
     plt.savefig(f'all_plots/error_plots/scheme_errors_func_u/{scheme}_error_f(u)',dpi=800)
@@ -158,28 +160,44 @@ if __name__ == '__main__':
 
   print('This UI is for testing distribution of phi with specific (Velocity, Gridpoint Number) pairs.\n')
 
-  #Ask user what fluid velocity and number of gridpoints they would like to try
-  attribute_prompt = {'constant fluid velocity':('m/s',' or float'),
-                      'number of gridpoints':('','')}
-  for attribute, dec in attribute_prompt.items():
-    while True:
-      print(f"What {attribute} would you like to test? Please enter an integer{dec[1]}.")
-      num_attribute = input()
-      try: num_attribute = int(num_attribute)
-      except ValueError:
-        try: num_attribute = float(num_attribute)
-        except ValueError: continue
-      if attribute == 'constant fluid velocity': 
-        velocity = num_attribute
-        print(f'The {attribute} in the domain has been set to {velocity} {dec[0]}')
-      if attribute == 'number of gridpoints': 
-        gridpoints = int(num_attribute)
-        print(f'The {attribute} in the domain has been set to {gridpoints} {dec[0]}')
-      break
-  
-
-  print('Solving equation in the Domain ...')
-  status_str = phi_distribution_plot(velocity,gridpoints)
-  print(status_str)
+  tryagain = True
+  while tryagain:
+    #Ask user what fluid velocity and number of gridpoints they would like to try
+    attribute_prompt = {'constant fluid velocity':('m/s',' or float'),
+                        'number of gridpoints':('','')}
+    for attribute, dec in attribute_prompt.items():
+      while True:
+        print(f"What {attribute} would you like to test? Please enter an integer{dec[1]}.")
+        num_attribute = input()
+        try: num_attribute = int(num_attribute)
+        except ValueError:
+          try: num_attribute = float(num_attribute)
+          except ValueError: continue
+        if attribute == 'constant fluid velocity': 
+          velocity = num_attribute
+          print(f'The {attribute} in the domain has been set to {velocity} {dec[0]}')
+        if attribute == 'number of gridpoints': 
+          gridpoints = int(num_attribute)
+          print(f'The {attribute} in the domain has been set to {gridpoints} {dec[0]}')
+        break
     
+
+    print('Solving equation in the Domain ...')
+    status_str = phi_distribution_plot(velocity,gridpoints)
+    print(status_str)
+    while True:
+      print('\nWould you like to try another pair?\n\t yes \n\t no')
+      input_a = input()
+      if input_a.lower() == 'yes': 
+        break
+      elif input_a.lower() == 'no':
+        tryagain = False 
+        break
+      else: 
+        print('Please answer: yes or no')
+        continue
+
+
+
+      
 
